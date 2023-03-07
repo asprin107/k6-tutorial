@@ -1,0 +1,30 @@
+---
+apiVersion: k6.io/v1alpha1
+kind: K6
+metadata:
+  name: k6-sample
+spec:
+  parallelism: 4
+  cleanup: post # If contain this tag, whole k8s resources related to k6 test will be removed after test finished.
+  script:
+    localFile: /test/testScenario/scenario_1.js
+  arguments: -o influxdb=http://{INFLUXDB_HOST}:8086/test -o statsd
+  runner:
+    image: {CUSTOM_IMAGE}
+    env:
+      - name: K6_STATSD_ENABLE_TAGS
+        value: 'true'
+      - name: K6_STATSD_ADDR
+        value: datadog:8125
+      - name: K6_INFLUXDB_USERNAME
+        value: my-user
+      - name: K6_INFLUXDB_PASSWORD
+        value: my-password
+      - name: K6_INFLUXDB_INSECURE
+        value: 'false'
+      - name: K6_INFLUXDB_PUSH_INTERVAL
+        value: '1s'
+      - name: K6_INFLUXDB_CONCURRENT_WRITES
+        value: '4'
+      - name: SERVER_HOST
+        value: {TARGET_SERVER_HOST}:8080

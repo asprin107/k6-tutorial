@@ -1,0 +1,45 @@
+# Default values for k6-test.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+k6:
+  parallelism: 4
+  testFile: /test/testScenario/scenario_1.js
+  arguments: "-o influxdb=http://INFLUXDB_HOST:8086/test -o statsd"
+  target_server_host: TARGET_SERVER_HOST:PORT
+  runner:
+    image: CUSTOM_IMAGE:TAG
+
+
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local

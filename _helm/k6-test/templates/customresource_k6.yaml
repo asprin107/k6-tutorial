@@ -1,0 +1,29 @@
+apiVersion: k6.io/v1alpha1
+kind: K6
+metadata:
+  name: {{ include "k6-test.fullname" . }}
+spec:
+  parallelism: {{ .Values.k6.parallelism }}
+  cleanup: post # If contain this tag, whole k8s resources related to k6 test will be removed after test finished.
+  script:
+    localFile: {{ .Values.k6.testFile }}
+  arguments: {{ .Values.k6.arguments }}
+  runner:
+    image: {{ .Values.k6.runner.image }}
+    env:
+      - name: K6_STATSD_ENABLE_TAGS
+        value: 'true'
+      - name: K6_STATSD_ADDR
+        value: datadog:8125
+      - name: K6_INFLUXDB_USERNAME
+        value: my-user
+      - name: K6_INFLUXDB_PASSWORD
+        value: my-password
+      - name: K6_INFLUXDB_INSECURE
+        value: 'false'
+      - name: K6_INFLUXDB_PUSH_INTERVAL
+        value: '1s'
+      - name: K6_INFLUXDB_CONCURRENT_WRITES
+        value: '4'
+      - name: SERVER_HOST
+        value: {{ .Values.k6.target_server_host }}
