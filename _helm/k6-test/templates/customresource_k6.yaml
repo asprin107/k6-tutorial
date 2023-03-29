@@ -8,7 +8,14 @@ spec:
   script:
     localFile: {{ .Values.k6.testFile }} # 사용자 custom. 어떤 파일을 테스트할지
   arguments: {{ .Values.k6.arguments }} # 공통. 정책 요소. 변경 가능성 적게 있음.
+  starter:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
   runner:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
     image: {{ .Values.k6.runner.image }} # 자동으로 변경될 부분, 매번 변경됨. image tag : commit id
     env:
       - name: K6_STATSD_ENABLE_TAGS
