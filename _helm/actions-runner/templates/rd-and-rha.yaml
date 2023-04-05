@@ -1,0 +1,93 @@
+{{- $github := .Values.github -}}
+{{- $runner          := .Values.runner -}}
+{{- $autoscaling     := .Values.autoscaling -}}
+---
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: {{ $runner.name }}-rd
+  namespace: {{ $runner.namespace }}
+  labels:
+    access-level: {{ $github.accessLevel }}
+    repo-owner: {{ $github.organization }}
+spec:
+  template:
+    metadata:
+      namespace: {{ $runner.namespace }}
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+    
+    spec:
+      env:
+         # Issues a sleep command at the start of the entrypoint
+        - name: STARTUP_DELAY_IN_SECONDS
+          value: "2"
+        # Specify the duration to wait for the docker daemon to be available
+        # The default duration of 120 seconds is sometimes too short
+        # to reliably wait for the docker daemon to start
+        # See https://github.com/actions/actions-runner-controller/issues/1804
+        - name: WAIT_FOR_DOCKER_SECONDS
+          value: "120"
+        # Disables the wait for the docker daemon to be available check
+        - name: DISABLE_WAIT_FOR_DOCKER
+          value: "true"
+        # Disables automatic runner updates
+        # WARNING : Upon a new version of the actions/runner software being released 
+        # GitHub stops allocating jobs to runners on the previous version of the
+        # actions/runner software after 30 days.
+        - name: DISABLE_RUNNER_UPDATE
+          value: "true"
+      # env: []
+      organization: {{ $github.organization }}
+      
+      labels:
+      {{- range $val := $runner.lables }}
+        - {{ $val }}
+      {{- end }}
+
+      serviceAccountName: {{ $runner.serviceAccount }}
+      image: {{ $runner.image }} # Ref. default "summerwind/actions-runner" image: https://hub.docker.com/r/summerwind/actions-runner
+      imagePullPolicy: {{ $runner.imagePullPolicy }}
+      workDir: {{ $runner.workDir }}
+
+      resources: # Ref. https://github.com/actions-runner-controller/actions-runner-controller#additional-tweaks
+      {{- with $runner.resources }}
+{{ toYaml . | indent 8 }}
+      {{- end }}
+
+      # nodeSelector:
+      #   node-role.kubernetes.io/test: ""
+      
+      tolerations:
+      {{- with $runner.tolerations }}
+{{ toYaml . | indent 8}}
+      {{- end }}
+
+---
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: HorizontalRunnerAutoscaler
+metadata:
+  name: {{ $runner.name }}-hra
+  namespace: {{ $runner.namespace }}
+  labels:
+    access-level: {{ $github.accessLevel }}
+    repo-owner: {{ $github.organization }}
+spec:
+  scaleTargetRef:
+    name: {{ $runner.name }}-rd
+
+  minReplicas: {{ $autoscaling.minReplicas }}
+  maxReplicas: {{ $autoscaling.maxReplicas }}
+  scaleDownDelaySecondsAfterScaleOut: {{ $autoscaling.scaleDownDelaySecondsAfterScaleOut }}
+
+  metrics:
+    - type: PercentageRunnersBusy
+      {{- with $autoscaling.merics.PercentageRunnersBusy }}
+{{ toYaml . | indent 6 }}
+      {{- end }}
+      
+    # - type: TotalNumberOfQueuedAndInProgressWorkflowRuns
+    #   repositoryNames:
+    #   {{- range $val := $github.repositories }}
+    #     - {{ $val }}
+    #   {{- end }}
